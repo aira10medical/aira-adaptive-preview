@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIRA Adaptive</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Intelligent preoperative risk assessment designed for plastic surgeons.">
+<style>
+  :root {
+    --bg: #f6f8fb; --surface: #ffffff; --text: #14212e; --muted: #5a6b7c; --line: #dde4ec;
+    --brand: #1f4e79; --brand-2: #8fb8e8; --ok: #1d7a4a; --warn: #9a6a00; --bad: #a3322b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1520; --surface: #142131; --text: #e6edf5; --muted: #9db0c3; --line: #263a50;
+      --brand: #8fb8e8; --brand-2: #1f4e79; --ok: #5cc48c; --warn: #e2b04a; --bad: #ef7b72;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1520; --surface: #142131; --text: #e6edf5; --muted: #9db0c3; --line: #263a50;
+    --brand: #8fb8e8; --brand-2: #1f4e79; --ok: #5cc48c; --warn: #e2b04a; --bad: #ef7b72;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+  header { padding: 20px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .logo { font-weight: 700; letter-spacing: .2px; color: var(--brand); }
+  nav a { color: var(--muted); text-decoration: none; margin-left: 14px; font-size: 15px; }
+  .hero { padding: 40px 0 28px; }
+  h1 { font-size: clamp(28px, 6vw, 44px); line-height: 1.15; margin: 0 0 12px; }
+  h2 { font-size: 22px; margin: 0 0 12px; }
+  h3 { font-size: 17px; margin: 0 0 6px; }
+  .lead { font-size: 18px; color: var(--muted); margin: 0 0 22px; }
+  .tag { display: inline-block; font-size: 13px; color: var(--brand); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; margin-bottom: 14px; }
+  .btn { display: inline-block; border: 0; border-radius: 10px; padding: 12px 18px; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; }
+  .btn-primary { background: var(--brand); color: var(--bg); }
+  .btn-ghost { background: transparent; color: var(--brand); border: 1px solid var(--line); }
+  .btn:disabled { opacity: .55; cursor: wait; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; }
+  section { padding: 28px 0; border-top: 1px solid var(--line); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 14px; }
+  label { display: block; font-size: 14px; color: var(--muted); margin: 10px 0 4px; }
+  input, select, textarea { width: 100%; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
+  .check { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; font-size: 14px; color: var(--text); }
+  .check input { width: auto; margin-top: 4px; }
+  .notice { border-left: 4px solid var(--warn); background: var(--surface); padding: 12px 14px; border-radius: 8px; font-size: 14px; }
+  .level { font-weight: 700; text-transform: capitalize; }
+  .lv-low { color: var(--ok); } .lv-moderate, .lv-medium { color: var(--warn); } .lv-high, .lv-very_high { color: var(--bad); }
+  .report { margin-top: 14px; }
+  .report ul { padding-left: 18px; margin: 6px 0; }
+  .pill { font-size: 12px; border: 1px solid var(--line); border-radius: 99px; padding: 1px 8px; margin-left: 6px; color: var(--muted); }
+  .hidden { display: none !important; }
+  .msg { font-size: 14px; margin-top: 10px; }
+  .msg.err { color: var(--bad); } .msg.ok { color: var(--ok); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  footer { padding: 28px 0 40px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
+  @media (max-width: 560px) { nav a:not(.keep) { display: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">AIRA Adaptive</div>
+    <nav><a href="#demo">Demo</a><a href="#how">How it works</a><a href="#access" class="keep">Request access</a><a href="#account" class="keep">Sign in</a></nav>
+  </header>
+
+  <div class="notice" style="margin-bottom:10px">Pilot environment · fictitious patients only · no real charges.</div>
+  <div id="config-warning" class="notice hidden">Preview mode: the AIRA Cloud backend is not configured on this page yet, so the demo, sign-in and forms are disabled.</div>
+
+  <div class="hero">
+    <span class="tag">For plastic surgeons and surgical teams</span>
+    <h1>Intelligent Preoperative Risk Assessment</h1>
+    <p class="lead">Structured clinical assessment. Evidence-informed risk stratification. Designed for plastic surgeons.</p>
+    <div class="row">
+      <a class="btn btn-primary" href="#demo">Try a fictitious case</a>
+      <a class="btn btn-ghost" href="#access">Request professional access</a>
+    </div>
+  </div>
+
+  <section id="how">
+    <h2>What AIRA Adaptive does</h2>
+    <div class="grid">
+      <div class="card"><h3>Structured capture</h3><p class="muted small">Age, weight, height, smoking status, Caprini score, hypertension and planned procedure, validated before anything is calculated.</p></div>
+      <div class="card"><h3>Official AIRA engine</h3><p class="muted small">Every result is produced by the versioned AIRA backend (Bukret Score model <code>bukret_v1_2026</code>), never by a chatbot or by this page.</p></div>
+      <div class="card"><h3>Actionable report</h3><p class="muted small">Risk score and level, contributing factors, rule-based clinical recommendations and a surgical eligibility suggestion for physician review.</p></div>
+      <div class="card"><h3>Private by design</h3><p class="muted small">Each professional works in an isolated account. No patient names or contact details are collected — only a short case alias.</p></div>
+    </div>
+    <p class="notice" style="margin-top:16px">AIRA Adaptive is algorithmic decision support for licensed professionals. Its suggestions require medical review and do not replace clinical judgment, examination or the treating surgeon's decision. Not for emergencies.</p>
+  </section>
+
+  <section id="demo">
+    <h2>Live demo · fictitious patients</h2>
+    <p class="muted small">Pick a predefined fictitious case. The report below is returned by the AIRA backend.</p>
+    <div id="demo-cases" class="row"></div>
+    <div id="demo-msg" class="msg"></div>
+    <div id="demo-report" class="report"></div>
+  </section>
+
+  <section id="access">
+    <h2>Request professional access</h2>
+    <p class="muted small">Access is currently provided through assisted onboarding: we verify your professional details and contact you with the available plans and conditions.</p>
+    <form id="access-form" class="card" novalidate>
+      <label for="ar-name">Full name</label><input id="ar-name" name="full_name" required maxlength="120" autocomplete="name">
+      <label for="ar-email">Professional email</label><input id="ar-email" name="email" type="email" required maxlength="200" autocomplete="email">
+      <div class="grid">
+        <div><label for="ar-country">Country</label><select id="ar-country" name="country"></select></div>
+        <div><label for="ar-specialty">Specialty</label><input id="ar-specialty" name="specialty" maxlength="80" placeholder="Plastic surgery"></div>
+      </div>
+      <label for="ar-org">Clinic or organization (optional)</label><input id="ar-org" name="organization" maxlength="120">
+      <label for="ar-interest">I'm interested in</label>
+      <select id="ar-interest" name="interest">
+        <option value="individual">Individual surgeon access</option>
+        <option value="clinic">Clinic / surgical team</option>
+        <option value="enterprise">Hospital or network</option>
+        <option value="demo">A guided demo</option>
+        <option value="other">Other</option>
+      </select>
+      <label for="ar-msg">Message (optional — do not include patient information)</label><textarea id="ar-msg" name="message" rows="3" maxlength="1000"></textarea>
+      <label class="check"><input type="checkbox" name="professional_confirmed"> I am a licensed medical professional.</label>
+      <label class="check"><input type="checkbox" name="privacy_accepted"> I agree that AIRA Adaptive may store these details to contact me about access.</label>
+      <label class="check"><input type="checkbox" name="marketing_consent"> Send me product updates (optional).</label>
+      <div class="row" style="margin-top:14px"><button class="btn btn-primary" type="submit">Send request</button></div>
+      <div id="access-msg" class="msg"></div>
+    </form>
+  </section>
+
+  <section id="account">
+    <h2>Professional account</h2>
+    <div id="auth-box" class="card">
+      <div class="row" style="margin-bottom:6px">
+        <button class="btn btn-ghost" id="tab-login" type="button">Sign in</button>
+        <button class="btn btn-ghost" id="tab-signup" type="button">Create account</button>
+      </div>
+      <form id="auth-form" novalidate>
+        <div id="signup-only" class="hidden"><label for="au-name">Full name</label><input id="au-name" maxlength="120" autocomplete="name"></div>
+        <label for="au-email">Email</label><input id="au-email" type="email" autocomplete="email" required>
+        <label for="au-pass">Password</label><input id="au-pass" type="password" minlength="10" autocomplete="current-password" required>
+        <div id="signup-terms" class="hidden">
+          <label class="check"><input type="checkbox" id="au-pro"> I am a licensed medical professional and will use AIRA Adaptive only in my professional capacity.</label>
+        </div>
+        <div class="row" style="margin-top:14px"><button class="btn btn-primary" id="auth-submit" type="submit">Sign in</button></div>
+        <div id="auth-msg" class="msg"></div>
+      </form>
+    </div>
+
+    <div id="app-box" class="hidden">
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <div><strong id="me-name"></strong> <span class="pill" id="me-status"></span></div>
+          <button class="btn btn-ghost" id="logout" type="button">Sign out</button>
+        </div>
+        <p class="small muted" id="me-balance"></p>
+        <p class="notice hidden" id="pending-note">Your account is pending professional verification. We will contact you to complete onboarding.</p>
+      </div>
+
+      <form id="eval-form" class="card hidden" style="margin-top:14px" novalidate>
+        <h3>New assessment</h3>
+        <p class="notice">Use only fictitious patients until data-protection controls for real patients are approved. Never enter names, emails, phone numbers or ID numbers.</p>
+        <label for="ev-ref">Case alias (optional, e.g. CASE-014)</label><input id="ev-ref" maxlength="24" pattern="[A-Za-z0-9_.#-]{1,24}">
+        <div class="grid">
+          <div><label for="ev-age">Age (years)</label><input id="ev-age" type="number" min="16" max="110" required></div>
+          <div><label for="ev-w">Weight (kg)</label><input id="ev-w" type="number" min="20" max="400" step="0.1" required></div>
+          <div><label for="ev-h">Height (cm)</label><input id="ev-h" type="number" min="100" max="250" required></div>
+          <div><label for="ev-cap">Caprini total</label><input id="ev-cap" type="number" min="0" max="60" required></div>
+        </div>
+        <div class="grid">
+          <div><label for="ev-smk">Smoking</label>
+            <select id="ev-smk"><option value="never">Never</option><option value="occasionally">Occasionally</option><option value="light">Light (1–7 per week)</option><option value="heavy">Heavy (more than 7 per week)</option><option value="smoker">Smoker, intensity unknown</option></select></div>
+          <div><label for="ev-htn">Hypertension</label><select id="ev-htn"><option value="">Not reported</option><option value="false">No</option><option value="true">Yes</option></select></div>
+        </div>
+        <label for="ev-proc">Planned procedure (optional)</label><input id="ev-proc" maxlength="120" placeholder="e.g. abdominoplasty">
+        <label class="check"><input type="checkbox" id="ev-consents"> The patient gave privacy, medical and contact consent.</label>
+        <label class="check"><input type="checkbox" id="ev-confirm"> I reviewed and confirm the data above.</label>
+        <div class="row" style="margin-top:14px"><button class="btn btn-primary" type="submit">Run AIRA assessment</button></div>
+        <div id="eval-msg" class="msg"></div>
+        <div id="eval-report" class="report"></div>
+      </form>
+
+      <div class="card" style="margin-top:14px">
+        <h3>Your assessments</h3>
+        <div id="history" class="small muted">No assessments yet.</div>
+        <div id="history-report" class="report"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    AIRA Adaptive · Decision support for licensed professionals. No regulatory clearance or clinical validation is claimed on this page.
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+// Configuración del proyecto AIRA Cloud. Se completa al desplegar; sin ella la página queda en modo vista previa.
+const AIRA_CONFIG = { supabaseUrl: "https://xdofwnncvhgdcsxlslci.supabase.co", publishableKey: "sb_publishable_nw9_aFTrH39QTL7Qcy6wgA_myxCRuF7" };
+
+const configured = Boolean(AIRA_CONFIG.supabaseUrl && AIRA_CONFIG.publishableKey);
+const API = configured ? `${AIRA_CONFIG.supabaseUrl.replace(/\/$/, "")}/functions/v1/aira-cloud-api` : "";
+const sb = configured ? supabase.createClient(AIRA_CONFIG.supabaseUrl, AIRA_CONFIG.publishableKey) : null;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function setMsg(el, text, kind) { el.textContent = text; el.className = "msg" + (kind ? " " + kind : ""); }
+
+async function api(path, opts = {}) {
+  const headers = { "Content-Type": "application/json", apikey: AIRA_CONFIG.publishableKey };
+  if (opts.auth && sb) {
+    const { data } = await sb.auth.getSession();
+    if (data.session) headers.Authorization = `Bearer ${data.session.access_token}`;
+  }
+  const r = await fetch(API + path, { method: opts.method ?? "GET", headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const body = await r.json().catch(() => ({}));
+  return { status: r.status, body };
+}
+
+const ERR = {
+  no_evaluations_available: "Your account has no assessments available.",
+  account_pending_review: "Your account is pending professional verification.",
+  missing_consents: "All three patient consents are required.",
+  data_not_confirmed: "Please confirm the data before running the assessment.",
+  engine_did_not_return_report: "The AIRA engine did not return a report. No assessment was used; please try again.",
+  too_many_requests: "Too many requests. Please try again later.",
+  unauthorized: "Your session expired. Please sign in again.",
+};
+const errText = (b) => ERR[b?.error] ?? `Request failed (${esc(b?.error ?? "error")}).`;
+
+function renderReport(r) {
+  if (!r?.risk) return "<p class='msg err'>No report available.</p>";
+  const lv = String(r.risk.level ?? "").toLowerCase().replace(/\s+/g, "_");
+  const factors = (r.risk.factors ?? []).map((f) => `<li>${esc(f.factor)}: ${esc(f.input)} → ${esc(f.contribution)}</li>`).join("");
+  const recs = (r.recommendations ?? []).map((x) => `<li>${esc(x.recommendation)} <span class="pill">${esc(x.priority)}</span></li>`).join("");
+  const el = r.surgical_eligibility;
+  return `<div class="card">
+    <div class="small muted">Model ${esc(r.risk.model_version)} · ${esc(new Date(r.risk.calculated_at).toLocaleString())}</div>
+    <p style="font-size:20px;margin:6px 0">Score <strong>${esc(r.risk.score)}</strong> · <span class="level lv-${esc(lv)}">${esc(r.risk.level)}</span></p>
+    <div class="small">BMI ${esc(r.risk.bmi)} · Caprini ${esc(r.risk.caprini)}</div>
+    <h3 style="margin-top:12px">Contributing factors</h3><ul class="small">${factors}</ul>
+    ${recs ? `<h3>Clinical recommendations</h3><ul class="small">${recs}</ul>` : ""}
+    ${el ? `<h3>Surgical eligibility suggestion</h3><p class="small">${esc(el.eligibility_status).replaceAll("_", " ")}${el.max_surgery_hours ? ` · max ${esc(el.max_surgery_hours)} h` : ""} · combination ${el.combination_allowed ? "allowed" : "not suggested"}<br>${esc(el.clinical_summary)}<br><span class="muted">Pending physician review · ${esc(el.algorithm_version)}</span></p>` : ""}
+    <p class="small muted">${esc(r.disclaimer)}</p></div>`;
+}
+
+// ---- Demo ----
+async function loadDemo() {
+  const box = $("demo-cases");
+  if (!configured) { box.innerHTML = "<span class='small muted'>Demo available once the backend is connected.</span>"; return; }
+  const { status, body } = await api("/demo/cases");
+  if (status !== 200) { setMsg($("demo-msg"), "Demo unavailable right now.", "err"); return; }
+  box.innerHTML = body.cases.map((c) => `<button class="btn btn-ghost small" data-case="${esc(c.id)}" type="button">${esc(c.label)}</button>`).join("");
+  box.querySelectorAll("button").forEach((b) => b.addEventListener("click", async () => {
+    box.querySelectorAll("button").forEach((x) => x.disabled = true);
+    setMsg($("demo-msg"), "Running the AIRA engine…");
+    const r = await api("/demo/run", { method: "POST", body: { case_id: b.dataset.case } });
+    box.querySelectorAll("button").forEach((x) => x.disabled = false);
+    if (r.status !== 200) { setMsg($("demo-msg"), errText(r.body), "err"); return; }
+    setMsg($("demo-msg"), `Fictitious patient: ${r.body.fictitious_patient}`, "ok");
+    $("demo-report").innerHTML = renderReport(r.body.report);
+  }));
+}
+
+// ---- Access request ----
+const COUNTRIES = "AR,AU,BO,BR,CA,CL,CO,CR,DE,DO,EC,ES,FR,GB,GT,HN,IT,MX,NI,PA,PE,PT,PY,SV,US,UY,VE".split(",");
+function fillCountries() {
+  const dn = typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames(["en"], { type: "region" }) : null;
+  $("ar-country").innerHTML = "<option value=''>Select…</option>" + COUNTRIES.map((c) => `<option value="${c}">${esc(dn ? dn.of(c) : c)}</option>`).join("") + "<option value=''>Other</option>";
+}
+$("access-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!configured) return setMsg($("access-msg"), "Not available in preview mode.", "err");
+  const f = new FormData(e.target);
+  const body = { full_name: f.get("full_name"), email: f.get("email"), country: f.get("country") || undefined, specialty: f.get("specialty") || undefined,
+    organization: f.get("organization") || undefined, interest: f.get("interest"), message: f.get("message") || undefined,
+    professional_confirmed: f.get("professional_confirmed") === "on", privacy_accepted: f.get("privacy_accepted") === "on",
+    marketing_consent: f.get("marketing_consent") === "on", source: new URLSearchParams(location.search).get("src") ?? "web" };
+  const r = await api("/access-requests", { method: "POST", body });
+  if (r.status === 201) { e.target.reset(); setMsg($("access-msg"), "Thank you. We received your request and will contact you.", "ok"); }
+  else setMsg($("access-msg"), r.body?.error?.endsWith("_required") ? "Please confirm both required checkboxes." : errText(r.body), "err");
+});
+
+// ---- Auth ----
+let mode = "login";
+function setMode(m) {
+  mode = m;
+  $("signup-only").classList.toggle("hidden", m !== "signup");
+  $("signup-terms").classList.toggle("hidden", m !== "signup");
+  $("auth-submit").textContent = m === "signup" ? "Create account" : "Sign in";
+  $("au-pass").autocomplete = m === "signup" ? "new-password" : "current-password";
+}
+$("tab-login").onclick = () => setMode("login");
+$("tab-signup").onclick = () => setMode("signup");
+$("auth-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!configured) return setMsg($("auth-msg"), "Not available in preview mode.", "err");
+  const email = $("au-email").value.trim(), password = $("au-pass").value;
+  if (mode === "signup") {
+    if (!$("au-pro").checked) return setMsg($("auth-msg"), "Please confirm you are a licensed medical professional.", "err");
+    if (password.length < 10) return setMsg($("auth-msg"), "Use at least 10 characters.", "err");
+    const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name: $("au-name").value.trim() } } });
+    if (error) return setMsg($("auth-msg"), error.message, "err");
+    if (!data.session) return setMsg($("auth-msg"), "Check your email to confirm your account, then sign in.", "ok");
+  } else {
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) return setMsg($("auth-msg"), "Invalid email or password.", "err");
+  }
+  await refresh();
+});
+$("logout").onclick = async () => { await sb.auth.signOut(); await refresh(); };
+
+async function refresh() {
+  if (!configured) return;
+  const { data } = await sb.auth.getSession();
+  const signedIn = Boolean(data.session);
+  $("auth-box").classList.toggle("hidden", signedIn);
+  $("app-box").classList.toggle("hidden", !signedIn);
+  if (!signedIn) return;
+  const me = await api("/me", { auth: true });
+  if (me.status !== 200) return setMsg($("auth-msg"), errText(me.body), "err");
+  const active = me.body.profile.status === "active";
+  $("me-name").textContent = me.body.profile.full_name || "Professional account";
+  $("me-status").textContent = me.body.profile.status.replace("_", " ");
+  $("me-balance").textContent = `Assessments available: ${me.body.balance}${me.body.credit_env !== "live" ? " (test environment — no real charges)" : ""}`;
+  $("pending-note").classList.toggle("hidden", active);
+  $("eval-form").classList.toggle("hidden", !active);
+  await loadHistory();
+}
+
+// ---- Evaluations ----
+$("eval-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const num = (id) => Number($(id).value);
+  const htn = $("ev-htn").value;
+  const body = {
+    idempotency_key: (crypto.randomUUID?.() ?? String(Date.now()) + Math.random().toString(16).slice(2)),
+    age: num("ev-age"), weight_kg: num("ev-w"), height_cm: num("ev-h"), caprini_total: num("ev-cap"), smoking_status: $("ev-smk").value,
+    data_confirmed: $("ev-confirm").checked, consent_privacy: $("ev-consents").checked, consent_medical: $("ev-consents").checked, consent_contact: $("ev-consents").checked,
+  };
+  if ($("ev-ref").value.trim()) body.patient_ref = $("ev-ref").value.trim();
+  if ($("ev-proc").value.trim()) body.procedure_interest = $("ev-proc").value.trim();
+  if (htn) body.hypertension = htn === "true";
+  const btn = e.target.querySelector("button[type=submit]");
+  btn.disabled = true; setMsg($("eval-msg"), "Running the AIRA engine…");
+  const r = await api("/evaluations", { method: "POST", auth: true, body });
+  btn.disabled = false;
+  if (r.status !== 201 && r.status !== 200) { setMsg($("eval-msg"), errText(r.body), "err"); return; }
+  setMsg($("eval-msg"), `Report ready. Assessments available: ${r.body.balance}.`, "ok");
+  $("eval-report").innerHTML = renderReport(r.body.report);
+  await loadHistory();
+});
+
+async function loadHistory() {
+  const r = await api("/evaluations", { auth: true });
+  if (r.status !== 200 || !r.body.evaluations?.length) { $("history").textContent = "No assessments yet."; return; }
+  $("history").innerHTML = `<table><tr><th>Date</th><th>Case</th><th>Procedure</th><th>Level</th></tr>${r.body.evaluations.map((e) =>
+    `<tr data-id="${esc(e.evaluation_id)}" style="cursor:pointer"><td>${esc(new Date(e.created_at).toLocaleDateString())}</td><td>${esc(e.patient_ref ?? "—")}</td><td>${esc(e.procedure_interest ?? "—")}</td><td>${esc(e.risk_level ?? "—")}</td></tr>`).join("")}</table>`;
+  $("history").querySelectorAll("tr[data-id]").forEach((tr) => tr.addEventListener("click", async () => {
+    const d = await api(`/evaluations/${tr.dataset.id}`, { auth: true });
+    $("history-report").innerHTML = d.status === 200 ? renderReport(d.body.report) : `<p class="msg err">${errText(d.body)}</p>`;
+  }));
+}
+
+if (!configured) $("config-warning").classList.remove("hidden");
+fillCountries();
+setMode("login");
+loadDemo();
+refresh();
+if (sb) sb.auth.onAuthStateChange(() => refresh());
+</script>
+</body>
+</html>
