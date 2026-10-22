@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Connect AIRA Adaptive</title>
+<style>
+  :root { --bg: #f6f8fb; --surface: #ffffff; --text: #14212e; --muted: #5a6b7c; --line: #dde4ec; --brand: #1f4e79; --bad: #a3322b; --ok: #1d7a4a; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #0d1520; --surface: #142131; --text: #e6edf5; --muted: #9db0c3; --line: #263a50; --brand: #8fb8e8; --bad: #ef7b72; --ok: #5cc48c; }
+  }
+  :root[data-theme="dark"] { --bg: #0d1520; --surface: #142131; --text: #e6edf5; --muted: #9db0c3; --line: #263a50; --brand: #8fb8e8; --bad: #ef7b72; --ok: #5cc48c; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 440px; margin: 0 auto; padding: 32px 16px; }
+  .logo { font-weight: 700; color: var(--brand); margin-bottom: 18px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { margin: 0 0 12px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  label { display: block; font-size: 14px; color: var(--muted); margin: 12px 0 4px; }
+  input { width: 100%; padding: 11px 12px; border-radius: 9px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; }
+  .check { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--text); }
+  .check input { width: auto; margin-top: 4px; }
+  .btn { display: block; width: 100%; border: 0; border-radius: 10px; padding: 12px 18px; font: inherit; font-weight: 600; cursor: pointer; margin-top: 14px; }
+  .primary { background: var(--brand); color: var(--bg); }
+  .ghost { background: transparent; color: var(--brand); border: 1px solid var(--line); }
+  .btn:disabled { opacity: .55; cursor: wait; }
+  .msg { font-size: 14px; margin-top: 12px; } .err { color: var(--bad); } .ok { color: var(--ok); }
+  .hidden { display: none !important; }
+  a { color: var(--brand); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">AIRA Adaptive</div>
+  <div class="card">
+    <div id="loading"><p class="muted">Loading…</p></div>
+
+    <div id="expired" class="hidden">
+      <h1>Link expired</h1>
+      <p class="muted">This connection request is no longer valid. Go back to ChatGPT and connect AIRA Adaptive again.</p>
+    </div>
+
+    <form id="login" class="hidden" novalidate>
+      <h1 id="login-title">Sign in to connect</h1>
+      <p class="muted"><span id="client-name">ChatGPT</span> wants to use your AIRA Adaptive professional account.</p>
+      <div id="signup-only" class="hidden"><label for="name">Full name</label><input id="name" maxlength="120" autocomplete="name"></div>
+      <label for="email">Email</label><input id="email" type="email" autocomplete="email" required>
+      <label for="pass">Password</label><input id="pass" type="password" autocomplete="current-password" minlength="10" required>
+      <label class="check hidden" id="pro-row"><input type="checkbox" id="pro"> I am a licensed medical professional and will use AIRA Adaptive only in my professional capacity.</label>
+      <button class="btn primary" id="submit" type="submit">Sign in</button>
+      <button class="btn ghost" id="toggle" type="button">Create an account</button>
+      <div id="login-msg" class="msg"></div>
+    </form>
+
+    <div id="consent" class="hidden">
+      <h1>Allow access?</h1>
+      <p><strong id="consent-client">ChatGPT</strong> will be able to run AIRA Adaptive assessments and read the assessment history of your organization, signed in as <strong id="consent-email"></strong>.</p>
+      <p class="muted">Pilot environment: fictitious patients only. No payments are made through ChatGPT.</p>
+      <button class="btn primary" id="allow" type="button">Allow</button>
+      <button class="btn ghost" id="deny" type="button">Cancel</button>
+      <button class="btn ghost" id="switch" type="button">Use another account</button>
+      <div id="consent-msg" class="msg"></div>
+    </div>
+  </div>
+  <p class="muted" style="margin-top:16px">AIRA Adaptive is decision support for licensed professionals and does not replace clinical judgment.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const AIRA_CONFIG = { supabaseUrl: "https://xdofwnncvhgdcsxlslci.supabase.co", publishableKey: "sb_publishable_nw9_aFTrH39QTL7Qcy6wgA_myxCRuF7" };
+const MCP = `${AIRA_CONFIG.supabaseUrl}/functions/v1/aira-adaptive`;
+const sb = supabase.createClient(AIRA_CONFIG.supabaseUrl, AIRA_CONFIG.publishableKey);
+const $ = (id) => document.getElementById(id);
+const tx = new URLSearchParams(location.search).get("tx") ?? "";
+let mode = "login";
+
+function show(id) { for (const s of ["loading", "expired", "login", "consent"]) $(s).classList.toggle("hidden", s !== id); }
+function msg(el, text, kind) { el.textContent = text; el.className = "msg" + (kind ? " " + kind : ""); }
+
+async function finish(decision) {
+  const { data } = await sb.auth.getSession();
+  for (const b of ["allow", "deny", "switch"]) $(b).disabled = true;
+  const r = await fetch(`${MCP}/oauth/complete`, { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tx, decision, access_token: data.session?.access_token ?? "" }) });
+  const body = await r.json().catch(() => ({}));
+  if (body.redirect_to) { msg($("consent-msg"), decision === "allow" ? "Connected. Returning to ChatGPT…" : "Cancelled. Returning to ChatGPT…", "ok"); location.replace(body.redirect_to); return; }
+  for (const b of ["allow", "deny", "switch"]) $(b).disabled = false;
+  if (body.error === "expired") return show("expired");
+  msg($("consent-msg"), body.error === "invalid_session" ? "Your session expired. Please sign in again." : "Could not complete the connection. Please try again.", "err");
+}
+
+async function render() {
+  const { data } = await sb.auth.getSession();
+  if (data.session) { $("consent-email").textContent = data.session.user.email; show("consent"); } else show("login");
+}
+
+function setMode(m) {
+  mode = m;
+  $("signup-only").classList.toggle("hidden", m !== "signup");
+  $("pro-row").classList.toggle("hidden", m !== "signup");
+  $("login-title").textContent = m === "signup" ? "Create your account" : "Sign in to connect";
+  $("submit").textContent = m === "signup" ? "Create account" : "Sign in";
+  $("toggle").textContent = m === "signup" ? "I already have an account" : "Create an account";
+  $("pass").autocomplete = m === "signup" ? "new-password" : "current-password";
+}
+
+$("toggle").onclick = () => setMode(mode === "signup" ? "login" : "signup");
+$("login").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = $("email").value.trim(), password = $("pass").value;
+  $("submit").disabled = true;
+  try {
+    if (mode === "signup") {
+      if (!$("pro").checked) return msg($("login-msg"), "Please confirm you are a licensed medical professional.", "err");
+      if (password.length < 10) return msg($("login-msg"), "Use at least 10 characters.", "err");
+      const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name: $("name").value.trim() } } });
+      if (error) return msg($("login-msg"), error.message, "err");
+      if (!data.session) return msg($("login-msg"), "Check your email to confirm your account, then sign in.", "ok");
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) return msg($("login-msg"), "Invalid email or password.", "err");
+    }
+    await render();
+  } finally { $("submit").disabled = false; }
+});
+$("allow").onclick = () => finish("allow");
+$("deny").onclick = () => finish("deny");
+$("switch").onclick = async () => { await sb.auth.signOut(); setMode("login"); show("login"); };
+
+(async () => {
+  if (!/^[A-Za-z0-9_-]{20,}$/.test(tx)) return show("expired");
+  const r = await fetch(`${MCP}/oauth/transaction?tx=${encodeURIComponent(tx)}`).catch(() => null);
+  if (!r || !r.ok) return show("expired");
+  const t = await r.json();
+  const name = t.client_name || "ChatGPT";
+  $("client-name").textContent = name; $("consent-client").textContent = name;
+  setMode("login");
+  await render();
+})();
+</script>
+</body>
+</html>
