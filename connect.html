@@ -41,12 +41,12 @@
 
     <div id="expired" class="hidden">
       <h1>Link expired</h1>
-      <p class="muted">This connection request is no longer valid. Go back to ChatGPT and connect AIRA Adaptive again.</p>
+      <p class="muted">This connection request is no longer valid. Go back to your AI assistant and connect AIRA Adaptive again.</p>
     </div>
 
     <form id="login" class="hidden" novalidate>
       <h1 id="login-title">Sign in to connect</h1>
-      <p class="muted"><span id="client-name">ChatGPT</span> wants to use your AIRA Adaptive professional account.</p>
+      <p class="muted"><span id="client-name">Your AI assistant</span> wants to use your AIRA Adaptive professional account.</p>
       <div id="signup-only" class="hidden"><label for="name">Full name</label><input id="name" maxlength="120" autocomplete="name"></div>
       <label for="email">Email</label><input id="email" type="email" autocomplete="email" required>
       <label for="pass">Password</label><input id="pass" type="password" autocomplete="current-password" minlength="10" required>
@@ -56,10 +56,23 @@
       <div id="login-msg" class="msg"></div>
     </form>
 
+    <form id="mfa" class="hidden" novalidate>
+      <h1 id="mfa-title">Two-step verification</h1>
+      <p class="muted" id="mfa-help">Enter the 6-digit code from your authenticator app.</p>
+      <div id="mfa-enroll" class="hidden">
+        <p class="muted">Scan this QR code with an authenticator app (for example Google Authenticator or 1Password), or enter the key manually.</p>
+        <img id="mfa-qr" alt="QR code for your authenticator app" width="180" height="180" style="display:block;margin:8px auto;background:#fff;border-radius:8px">
+        <p class="muted" style="word-break:break-all">Key: <code id="mfa-secret"></code></p>
+      </div>
+      <label for="mfa-code">Code</label><input id="mfa-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+      <button class="btn primary" id="mfa-submit" type="submit">Verify</button>
+      <div id="mfa-msg" class="msg"></div>
+    </form>
+
     <div id="consent" class="hidden">
       <h1>Allow access?</h1>
-      <p><strong id="consent-client">ChatGPT</strong> will be able to run AIRA Adaptive assessments and read the assessment history of your organization, signed in as <strong id="consent-email"></strong>.</p>
-      <p class="muted">Pilot environment: fictitious patients only. No payments are made through ChatGPT.</p>
+      <p><strong id="consent-client">Your AI assistant</strong> will be able to run AIRA Adaptive assessments and read the assessment history of your organization, signed in as <strong id="consent-email"></strong>.</p>
+      <p class="muted" id="consent-note">Enter only the structured clinical fields requested; never patient names, contact details, ID numbers or dates. No payments are made through the AI assistant.</p>
       <button class="btn primary" id="allow" type="button">Allow</button>
       <button class="btn ghost" id="deny" type="button">Cancel</button>
       <button class="btn ghost" id="switch" type="button">Use another account</button>
@@ -76,9 +89,9 @@ const MCP = `${AIRA_CONFIG.supabaseUrl}/functions/v1/aira-adaptive`;
 const sb = supabase.createClient(AIRA_CONFIG.supabaseUrl, AIRA_CONFIG.publishableKey);
 const $ = (id) => document.getElementById(id);
 const tx = new URLSearchParams(location.search).get("tx") ?? "";
-let mode = "login";
+let mode = "login", clientName = "your AI assistant", mfaRequired = false, mfaFactor = null;
 
-function show(id) { for (const s of ["loading", "expired", "login", "consent"]) $(s).classList.toggle("hidden", s !== id); }
+function show(id) { for (const s of ["loading", "expired", "login", "mfa", "consent"]) $(s).classList.toggle("hidden", s !== id); }
 function msg(el, text, kind) { el.textContent = text; el.className = "msg" + (kind ? " " + kind : ""); }
 
 async function finish(decision) {
@@ -87,16 +100,56 @@ async function finish(decision) {
   const r = await fetch(`${MCP}/oauth/complete`, { method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tx, decision, access_token: data.session?.access_token ?? "" }) });
   const body = await r.json().catch(() => ({}));
-  if (body.redirect_to) { msg($("consent-msg"), decision === "allow" ? "Connected. Returning to ChatGPT…" : "Cancelled. Returning to ChatGPT…", "ok"); location.replace(body.redirect_to); return; }
+  if (body.redirect_to) { msg($("consent-msg"), decision === "allow" ? `Connected. Returning to ${clientName}…` : `Cancelled. Returning to ${clientName}…`, "ok"); location.replace(body.redirect_to); return; }
   for (const b of ["allow", "deny", "switch"]) $(b).disabled = false;
   if (body.error === "expired") return show("expired");
+  if (body.error === "mfa_required") return startMfa();
   msg($("consent-msg"), body.error === "invalid_session" ? "Your session expired. Please sign in again." : "Could not complete the connection. Please try again.", "err");
 }
 
 async function render() {
   const { data } = await sb.auth.getSession();
-  if (data.session) { $("consent-email").textContent = data.session.user.email; show("consent"); } else show("login");
+  if (!data.session) return show("login");
+  if (mfaRequired) {
+    const { data: aal } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal?.currentLevel !== "aal2") return startMfa();
+  }
+  $("consent-email").textContent = data.session.user.email; show("consent");
 }
+
+// Segundo factor TOTP de Supabase Auth: alta la primera vez, luego verificación en cada conexión.
+async function startMfa() {
+  msg($("mfa-msg"), ""); $("mfa-code").value = "";
+  const { data: f, error } = await sb.auth.mfa.listFactors();
+  if (error) return msg($("login-msg"), "Could not start two-step verification. Please try again.", "err"), show("login");
+  const verified = (f?.totp ?? []).find((x) => x.status === "verified");
+  if (verified) {
+    mfaFactor = verified.id;
+    $("mfa-enroll").classList.add("hidden");
+    $("mfa-title").textContent = "Two-step verification";
+  } else {
+    for (const x of f?.all ?? []) if (x.status !== "verified") await sb.auth.mfa.unenroll({ factorId: x.id });
+    const { data: e, error: ee } = await sb.auth.mfa.enroll({ factorType: "totp", friendlyName: "AIRA Adaptive" });
+    if (ee) return msg($("login-msg"), "Could not start two-step verification. Please try again.", "err"), show("login");
+    mfaFactor = e.id;
+    $("mfa-qr").src = e.totp.qr_code; $("mfa-secret").textContent = e.totp.secret;
+    $("mfa-enroll").classList.remove("hidden");
+    $("mfa-title").textContent = "Set up two-step verification";
+  }
+  show("mfa"); $("mfa-code").focus();
+}
+
+$("mfa").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const code = $("mfa-code").value.trim();
+  if (!/^[0-9]{6}$/.test(code)) return msg($("mfa-msg"), "Enter the 6-digit code.", "err");
+  $("mfa-submit").disabled = true;
+  try {
+    const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: mfaFactor, code });
+    if (error) return msg($("mfa-msg"), "Invalid code. Please try again.", "err");
+    await render();
+  } finally { $("mfa-submit").disabled = false; }
+});
 
 function setMode(m) {
   mode = m;
@@ -136,8 +189,10 @@ $("switch").onclick = async () => { await sb.auth.signOut(); setMode("login"); s
   const r = await fetch(`${MCP}/oauth/transaction?tx=${encodeURIComponent(tx)}`).catch(() => null);
   if (!r || !r.ok) return show("expired");
   const t = await r.json();
-  const name = t.client_name || "ChatGPT";
-  $("client-name").textContent = name; $("consent-client").textContent = name;
+  clientName = t.client_name || "your AI assistant";
+  mfaRequired = t.mfa_required === true;
+  $("client-name").textContent = clientName; $("consent-client").textContent = clientName;
+  if (t.fictitious_only !== false) $("consent-note").textContent = "Current release: only fictitious cases are accepted; real-patient processing is not yet enabled. No payments are made through the AI assistant.";
   setMode("login");
   await render();
 })();
