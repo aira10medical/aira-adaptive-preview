@@ -50,7 +50,7 @@
       <div id="signup-only" class="hidden"><label for="name">Full name</label><input id="name" maxlength="120" autocomplete="name"></div>
       <label for="email">Email</label><input id="email" type="email" autocomplete="email" required>
       <label for="pass">Password</label><input id="pass" type="password" autocomplete="current-password" minlength="10" required>
-      <label class="check hidden" id="pro-row"><input type="checkbox" id="pro"> I am a licensed medical professional and will use AIRA Adaptive only in my professional capacity.</label>
+      <label class="check hidden" id="pro-row"><input type="checkbox" id="pro"> <span>I am a licensed medical professional, I will use AIRA Adaptive only in my professional capacity, and I accept the <a href="https://airaadaptive.com/terms/" target="_blank" rel="noopener">Terms</a> and the <a href="https://airaadaptive.com/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
       <button class="btn primary" id="submit" type="submit">Sign in</button>
       <button class="btn ghost" id="toggle" type="button">Create an account</button>
       <div id="login-msg" class="msg"></div>
@@ -89,7 +89,7 @@ const MCP = `${AIRA_CONFIG.supabaseUrl}/functions/v1/aira-adaptive`;
 const sb = supabase.createClient(AIRA_CONFIG.supabaseUrl, AIRA_CONFIG.publishableKey);
 const $ = (id) => document.getElementById(id);
 const tx = new URLSearchParams(location.search).get("tx") ?? "";
-let mode = "login", clientName = "your AI assistant", mfaRequired = false, mfaFactor = null;
+let mode = "login", clientName = "your AI assistant", mfaRequired = false, mfaFactor = null, free = false;
 
 function show(id) { for (const s of ["loading", "expired", "login", "mfa", "consent"]) $(s).classList.toggle("hidden", s !== id); }
 function msg(el, text, kind) { el.textContent = text; el.className = "msg" + (kind ? " " + kind : ""); }
@@ -157,7 +157,7 @@ function setMode(m) {
   $("pro-row").classList.toggle("hidden", m !== "signup");
   $("login-title").textContent = m === "signup" ? "Create your account" : "Sign in to connect";
   $("submit").textContent = m === "signup" ? "Create account" : "Sign in";
-  $("toggle").textContent = m === "signup" ? "I already have an account" : "Create an account";
+  $("toggle").textContent = m === "signup" ? "I already have an account" : (free ? "Create a free account" : "Create an account");
   $("pass").autocomplete = m === "signup" ? "new-password" : "current-password";
 }
 
@@ -170,7 +170,8 @@ $("login").addEventListener("submit", async (e) => {
     if (mode === "signup") {
       if (!$("pro").checked) return msg($("login-msg"), "Please confirm you are a licensed medical professional.", "err");
       if (password.length < 10) return msg($("login-msg"), "Use at least 10 characters.", "err");
-      const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name: $("name").value.trim() } } });
+      const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href,
+        data: { full_name: $("name").value.trim(), licensed_professional: true, terms_accepted_at: new Date().toISOString() } } });
       if (error) return msg($("login-msg"), error.message, "err");
       if (!data.session) return msg($("login-msg"), "Check your email to confirm your account, then sign in.", "ok");
     } else {
@@ -192,7 +193,9 @@ $("switch").onclick = async () => { await sb.auth.signOut(); setMode("login"); s
   clientName = t.client_name || "your AI assistant";
   mfaRequired = t.mfa_required === true;
   $("client-name").textContent = clientName; $("consent-client").textContent = clientName;
-  if (t.fictitious_only !== false) $("consent-note").textContent = "Current release: only fictitious cases are accepted; real-patient processing is not yet enabled. No payments are made through the AI assistant.";
+  free = t.free_access === true;
+  if (free) $("consent-note").textContent = "Free access, no payments. Only simulated cases that do not correspond to an identifiable patient; never enter names, contact details, ID numbers or dates.";
+  else if (t.fictitious_only !== false) $("consent-note").textContent = "Current release: only fictitious cases are accepted; real-patient processing is not yet enabled. No payments are made through the AI assistant.";
   setMode("login");
   await render();
 })();
