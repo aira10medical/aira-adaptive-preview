@@ -50,8 +50,11 @@
       <div id="signup-only" class="hidden"><label for="name">Full name</label><input id="name" maxlength="120" autocomplete="name"></div>
       <label for="email">Email</label><input id="email" type="email" autocomplete="email" required>
       <label for="pass">Password</label><input id="pass" type="password" autocomplete="current-password" minlength="10" required>
-      <label class="check hidden" id="pro-row"><input type="checkbox" id="pro"> <span>I am a licensed medical professional, I will use AIRA Adaptive only in my professional capacity, and I accept the <a href="https://airaadaptive.com/terms/" target="_blank" rel="noopener">Terms</a> and the <a href="https://airaadaptive.com/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
-      <label class="check hidden" id="eu-row"><input type="checkbox" id="eu"> <span>I practise in the European Union / EEA.</span></label>
+      <label class="check hidden" id="pro-row"><input type="checkbox" id="pro"> <span>I am a licensed medical professional, or authorized staff acting under the responsibility of a licensed physician; I will use AIRA Adaptive only in that professional capacity, and I accept the <a href="https://airaadaptive.com/terms/" target="_blank" rel="noopener">Terms</a> and the <a href="https://airaadaptive.com/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+      <fieldset class="hidden" id="eu-row" style="border:0;padding:0;margin:8px 0"><legend style="font-size:14px">Where do you practise? (required)</legend>
+        <label class="check"><input type="radio" name="region" value="eu_eea"> <span>I practise within the EU/EEA.</span></label>
+        <label class="check"><input type="radio" name="region" value="other"> <span>I practise outside the EU/EEA.</span></label>
+      </fieldset>
       <button class="btn primary" id="submit" type="submit">Sign in</button>
       <button class="btn ghost" id="toggle" type="button">Create an account</button>
       <div id="login-msg" class="msg"></div>
@@ -170,11 +173,13 @@ $("login").addEventListener("submit", async (e) => {
   $("submit").disabled = true;
   try {
     if (mode === "signup") {
-      if (!$("pro").checked) return msg($("login-msg"), "Please confirm you are a licensed medical professional.", "err");
+      if (!$("pro").checked) return msg($("login-msg"), "Please confirm you are a licensed medical professional or authorized staff under a physician's responsibility.", "err");
+      const region = document.querySelector('input[name="region"]:checked')?.value;
+      if (region !== "eu_eea" && region !== "other") return msg($("login-msg"), "Please select where you practise (within or outside the EU/EEA).", "err");
       if (password.length < 10) return msg($("login-msg"), "Use at least 10 characters.", "err");
       const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href,
-        data: { full_name: $("name").value.trim(), licensed_professional: true, terms_accepted_at: new Date().toISOString(),
-          practice_region: $("eu").checked ? "eu_eea" : "other", practice_region_source: "signup" } } });
+        data: { full_name: $("name").value.trim(), professional_declaration: "licensed_professional_or_authorized_staff/2026-11-26", terms_accepted_at: new Date().toISOString(),
+          practice_region: region, practice_region_source: "signup" } } });
       if (error) return msg($("login-msg"), error.message, "err");
       if (!data.session) return msg($("login-msg"), "Check your email to confirm your account, then sign in.", "ok");
     } else {
