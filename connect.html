@@ -51,6 +51,7 @@
       <label for="email">Email</label><input id="email" type="email" autocomplete="email" required>
       <label for="pass">Password</label><input id="pass" type="password" autocomplete="current-password" minlength="10" required>
       <label class="check hidden" id="pro-row"><input type="checkbox" id="pro"> <span>I am a licensed medical professional, I will use AIRA Adaptive only in my professional capacity, and I accept the <a href="https://airaadaptive.com/terms/" target="_blank" rel="noopener">Terms</a> and the <a href="https://airaadaptive.com/privacy/" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+      <label class="check hidden" id="eu-row"><input type="checkbox" id="eu"> <span>I practise in the European Union / EEA.</span></label>
       <button class="btn primary" id="submit" type="submit">Sign in</button>
       <button class="btn ghost" id="toggle" type="button">Create an account</button>
       <div id="login-msg" class="msg"></div>
@@ -155,6 +156,7 @@ function setMode(m) {
   mode = m;
   $("signup-only").classList.toggle("hidden", m !== "signup");
   $("pro-row").classList.toggle("hidden", m !== "signup");
+  $("eu-row").classList.toggle("hidden", m !== "signup");
   $("login-title").textContent = m === "signup" ? "Create your account" : "Sign in to connect";
   $("submit").textContent = m === "signup" ? "Create account" : "Sign in";
   $("toggle").textContent = m === "signup" ? "I already have an account" : (free ? "Create a free account" : "Create an account");
@@ -171,7 +173,8 @@ $("login").addEventListener("submit", async (e) => {
       if (!$("pro").checked) return msg($("login-msg"), "Please confirm you are a licensed medical professional.", "err");
       if (password.length < 10) return msg($("login-msg"), "Use at least 10 characters.", "err");
       const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href,
-        data: { full_name: $("name").value.trim(), licensed_professional: true, terms_accepted_at: new Date().toISOString() } } });
+        data: { full_name: $("name").value.trim(), licensed_professional: true, terms_accepted_at: new Date().toISOString(),
+          practice_region: $("eu").checked ? "eu_eea" : "other", practice_region_source: "signup" } } });
       if (error) return msg($("login-msg"), error.message, "err");
       if (!data.session) return msg($("login-msg"), "Check your email to confirm your account, then sign in.", "ok");
     } else {
